@@ -1,0 +1,156 @@
+import UIKit
+import WebKit
+
+class ViewController: UIViewController, WKNavigationDelegate, UITextFieldDelegate {
+    
+    var webView: WKWebView!
+    let searchBar = UITextField()
+    let vpnButton = UIButton(type: .system)
+    let aiButton = UIButton(type: .system)
+    var isVPNOn = false
+    
+    override func loadView() {
+        let config = WKWebViewConfiguration()
+        webView = WKWebView(frame: .zero, configuration: config)
+        webView.navigationDelegate = self
+        webView.allowsBackForwardNavigationGestures = true
+        view = webView
+    }
+    
+    override func viewDidLoad() {
+        super.viewDidLoad()
+        setupUI()
+        loadMyHomepage()
+    }
+    
+    func setupUI() {
+        let topBar = UIView()
+        topBar.backgroundColor = UIColor.white
+        topBar.translatesAutoresizingMaskIntoConstraints = false
+        
+        searchBar.placeholder = "Search or type URL..."
+        searchBar.borderStyle = .roundedRect
+        searchBar.backgroundColor = UIColor(white: 0.95, alpha: 1)
+        searchBar.delegate = self
+        searchBar.returnKeyType = .go
+        searchBar.translatesAutoresizingMaskIntoConstraints = false
+        
+        let goButton = UIButton(type: .system)
+        goButton.setTitle("Go", for: .normal)
+        goButton.addTarget(self, action: #selector(goTapped), for: .touchUpInside)
+        goButton.translatesAutoresizingMaskIntoConstraints = false
+        
+        vpnButton.setTitle("VPN: OFF", for: .normal)
+        vpnButton.backgroundColor = UIColor.lightGray
+        vpnButton.setTitleColor(.black, for: .normal)
+        vpnButton.titleLabel?.font = UIFont.systemFont(ofSize: 12, weight: .bold)
+        vpnButton.layer.cornerRadius = 8
+        vpnButton.addTarget(self, action: #selector(toggleVPN), for: .touchUpInside)
+        vpnButton.translatesAutoresizingMaskIntoConstraints = false
+        
+        aiButton.setTitle("AI", for: .normal)
+        aiButton.backgroundColor = UIColor.black
+        aiButton.setTitleColor(UIColor.white, for: .normal)
+        aiButton.titleLabel?.font = UIFont.systemFont(ofSize: 13, weight: .bold)
+        aiButton.layer.cornerRadius = 8
+        aiButton.addTarget(self, action: #selector(openAI), for: .touchUpInside)
+        aiButton.translatesAutoresizingMaskIntoConstraints = false
+        
+        view.addSubview(topBar)
+        topBar.addSubview(searchBar)
+        topBar.addSubview(goButton)
+        topBar.addSubview(vpnButton)
+        topBar.addSubview(aiButton)
+        
+        NSLayoutConstraint.activate([
+            topBar.topAnchor.constraint(equalTo: view.topAnchor, constant: 20),
+            topBar.leadingAnchor.constraint(equalTo: view.leadingAnchor),
+            topBar.trailingAnchor.constraint(equalTo: view.trailingAnchor),
+            topBar.heightAnchor.constraint(equalToConstant: 55),
+            
+            searchBar.leadingAnchor.constraint(equalTo: topBar.leadingAnchor, constant: 8),
+            searchBar.centerYAnchor.constraint(equalTo: topBar.centerYAnchor),
+            searchBar.trailingAnchor.constraint(equalTo: goButton.leadingAnchor, constant: -5),
+            
+            goButton.trailingAnchor.constraint(equalTo: vpnButton.leadingAnchor, constant: -5),
+            goButton.centerYAnchor.constraint(equalTo: topBar.centerYAnchor),
+            goButton.widthAnchor.constraint(equalToConstant: 35),
+            
+            vpnButton.trailingAnchor.constraint(equalTo: aiButton.leadingAnchor, constant: -5),
+            vpnButton.centerYAnchor.constraint(equalTo: topBar.centerYAnchor),
+            vpnButton.widthAnchor.constraint(equalToConstant: 70),
+            vpnButton.heightAnchor.constraint(equalToConstant: 32),
+            
+            aiButton.trailingAnchor.constraint(equalTo: topBar.trailingAnchor, constant: -8),
+            aiButton.centerYAnchor.constraint(equalTo: topBar.centerYAnchor),
+            aiButton.widthAnchor.constraint(equalToConstant: 45),
+            aiButton.heightAnchor.constraint(equalToConstant: 32),
+        ])
+        
+        webView.translatesAutoresizingMaskIntoConstraints = false
+        NSLayoutConstraint.activate([
+            webView.topAnchor.constraint(equalTo: topBar.bottomAnchor),
+            webView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
+            webView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
+            webView.bottomAnchor.constraint(equalTo: view.bottomAnchor),
+        ])
+    }
+    
+    // الصفحة الرئيسية Responsive ايفون + ايباد
+    func loadMyHomepage() {
+        let html = """
+        <!DOCTYPE html><html><head><meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <style>
+        *{margin:0;padding:0;box-sizing:border-box;font-family:-apple-system,Helvetica}
+        body{min-height:100vh;background: radial-gradient(at 30% 20%, #ffd6e0 0%, #d6eaff 50%, #ffe6f0 100%);display:flex;flex-direction:column;align-items:center;padding-top:10vh;padding-left:16px;padding-right:16px}
+        .search-box{width:100%;max-width:600px;height:54px;background:white;border-radius:28px;display:flex;align-items:center;padding:0 20px;box-shadow:0 10px 30px rgba(0,0,0,0.10)}
+        .search-box input{flex:1;border:none;outline:none;font-size:17px;color:#333}
+        .grid{margin-top:35px;width:100%;max-width:700px;display:grid;grid-template-columns:repeat(auto-fill, minmax(80px, 1fr));gap:14px;justify-content:center}
+        .card{height:82px;background:rgba(255,255,255,0.88);border-radius:18px;display:flex;flex-direction:column;align-items:center;justify-content:center;text-decoration:none;color:#222;font-size:11px;font-weight:500;box-shadow:0 4px 12px rgba(0,0,0,0.06);backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px)}
+        .card span{font-size:24px;margin-bottom:5px}
+        @media (min-width: 768px){body{padding-top:14vh}.search-box{height:62px;max-width:680px}.grid{grid-template-columns:repeat(6, 1fr);gap:18px;max-width:800px}.card{height:96px;border-radius:20px;font-size:12px}.card span{font-size:28px}}
+        @media (max-width: 380px){.grid{grid-template-columns:repeat(3, 1fr)}}
+        </style></head><body>
+        <div class="search-box"><span style='color:#4285f4;font-weight:bold;margin-right:10px;font-size:20px'>G</span><input id='q' placeholder='Search the web' onkeydown="if(event.key==='Enter'){search()}"><span onclick="search()" style='cursor:pointer;font-size:18px'>🔍</span></div>
+        <div class="grid">
+            <a class="card" href="https://youtube.com"><span>▶️</span>YouTube</a>
+            <a class="card" href="https://facebook.com"><span>📘</span>Facebook</a>
+            <a class="card" href="https://tiktok.com"><span>♪</span>TikTok</a>
+            <a class="card" href="https://instagram.com"><span>📸</span>Insta</a>
+            <a class="card" href="https://x.com"><span>𝕏</span>Twitter</a>
+            <a class="card" href="https://google.com"><span>🔎</span>Google</a>
+            <a class="card" href="https://netflix.com"><span style='color:#E50914;font-weight:900'>N</span>Netflix</a>
+            <a class="card" href="https://chat.openai.com"><span>🤖</span>h11 AI</a>
+        </div>
+        <script>function search(){let v=document.getElementById('q').value;if(v)location.href='https://www.google.com/search?q='+encodeURIComponent(v)}</script>
+        </body></html>
+        """
+        webView.loadHTMLString(html, baseURL: nil)
+    }
+    
+    @objc func goTapped() { _ = textFieldShouldReturn(searchBar) }
+    
+    func textFieldShouldReturn(_ textField: UITextField) -> Bool {
+        guard var text = textField.text, !text.isEmpty else { return true }
+        if !text.contains(".") {
+            text = "https://www.google.com/search?q=\(text.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? "")"
+        } else if !text.hasPrefix("http") {
+            text = "https://" + text
+        }
+        if let url = URL(string: text) { webView.load(URLRequest(url: url)) }
+        textField.resignFirstResponder()
+        return true
+    }
+    
+    @objc func toggleVPN() {
+        isVPNOn.toggle()
+        vpnButton.setTitle(isVPNOn ? "VPN: ON" : "VPN: OFF", for: .normal)
+        vpnButton.backgroundColor = isVPNOn ? UIColor.green : UIColor.lightGray
+    }
+    
+    @objc func openAI() {
+        if let url = URL(string: "https://chat.openai.com") {
+            webView.load(URLRequest(url: url))
+        }
+    }
+}
